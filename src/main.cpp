@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <DHT.h>
+#include <BH1750.h>
 #include <WiFi.h>
 
 /* Bibliotecas internas */
@@ -15,18 +16,25 @@
 const char* ssid = "GMS 2.4G";
 const char* password = "GMS271031@";
 
+/* Sensores */
 DHT dht(PIN_DHT, DHT22);
+BH1750 lightMeter;
+
+/* Protótipo das funções */
+void init_sensors();
 
 /* Protótipos das tasks */
 void taskDHT(void *parameter);
+void taskBH1750(void *parameter);
 
 void setup() 
 {
   Serial.begin(115200);
-  
-  dht.begin();
+
+  init_sensors();
   
   xTaskCreate(taskDHT, "taskDHT", 2048, NULL, 1, NULL);
+  xTaskCreate(taskBH1750, "taskBH1750", 2048, NULL, 1, NULL);
 }
 
 void loop() 
@@ -65,6 +73,26 @@ void loop()
   }
 }
 
+void init_sensors()
+{
+    if (isnan(dht.readTemperature()) || isnan(dht.readHumidity())) {
+        LOG("DHT", "Falha ao inicializar o sensor DHT22.");
+    } 
+    else
+    {
+        LOG("DHT", "Sensor DHT22 inicializado com sucesso.");
+    }
+    
+    if (lightMeter.begin())
+    {
+        LOG("BH1750", "Sensor BH1750 inicializado com sucesso.");
+    }
+    else
+    {
+        LOG("BH1750", "Falha ao inicializar o sensor BH1750.");
+    }
+}
+
 void taskDHT(void *parameter)
 {
   LOG("DHT", "Task DHT inicializada");
@@ -86,4 +114,29 @@ void taskDHT(void *parameter)
       endTaskTimer(MONITOR_DHT);
   }
   LOG("DHT", "Task DHT finalizada");
+}
+
+void taskBH1750(void *parameter)
+{
+    while (true)
+    {
+        startTaskTimer(MONITOR_BH1750);
+
+        // Leitura da luminosidade
+        float lux = lightMeter.readLightLevel();
+
+        // Verifica se a leitura é válida
+        if (lux == -1)
+        {
+            LOG("BH1750", "Falha ao ler do sensor BH1750");
+        }
+        else
+        {
+            LOG("BH1750", "Luminosidade: %.2f lx", lux);
+        }
+
+        // Delay para a próxima leitura (2 segundos)
+        vTaskDelay(pdMS_TO_TICKS(2000));
+        endTaskTimer(MONITOR_BH1750);
+    }
 }
