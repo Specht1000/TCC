@@ -12,6 +12,8 @@
 
 /* Pinagem do projeto */
 #define PIN_DHT 26
+#define PIN_SDA 21
+#define PIN_SCL 22
 
 const char* ssid = "GMS 2.4G";
 const char* password = "GMS271031@";
@@ -30,6 +32,16 @@ void taskBH1750(void *parameter);
 void setup() 
 {
   Serial.begin(115200);
+  Wire.begin(PIN_SDA, PIN_SCL);
+
+  Serial.print("/******************************************************************************\n");
+  Serial.print(" * Projeto: Dispositivo de Telemetria para Agricultura de Precisao e\n" );
+  Serial.print(" *          Monitoramento Ambiental\n");
+  Serial.print(" * Autor: Guilherme Martins Specht\n");
+  Serial.print(" * Orientador: Julio Cesar Marques de Lima\n");
+  Serial.print(" * Data: \n");
+  Serial.print(" * Descricao: Firmware de coleta e analise de dados\n");
+  Serial.print("/******************************************************************************\n");
 
   init_sensors();
   
@@ -41,7 +53,7 @@ void loop()
 {
   static bool connected = false;
 
-  // Tenta conectar ao Wi-Fi até ter sucesso
+  // Tenta conectar ao WiFi até ter sucesso
   if (!connected)
   {
       LOG("WIFI", "Tentando conectar ao Wi-Fi: %s", ssid);
