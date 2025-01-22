@@ -35,5 +35,6 @@ typedef struct {
 void taskMonitorTasks(void *pvParameters);
 void startTaskTimer(TASKS_TIMER task);
 void endTaskTimer(TASKS_TIMER task);
+void taskMonitorMemory(void *pvParameters);
 
 #endif // TASKS_MONITOR_H

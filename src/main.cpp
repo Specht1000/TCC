@@ -8,15 +8,16 @@
 
 /* Bibliotecas internas */
 #include "main.h"
+#include "filesystem.h"
 #include "tasks/task_monitor.h"
 
 /* Pinagem do projeto */
 #define PIN_DHT 26
-#define PIN_SDA 21
-#define PIN_SCL 22
+#define PIN_SDA 32
+#define PIN_SCL 33
 
 const char* ssid = "GMS 2.4G";
-const char* password = "GMS271031@";
+const char* password = "GMS271931@";
 
 /* Sensores */
 DHT dht(PIN_DHT, DHT22);
@@ -44,9 +45,15 @@ void setup()
   Serial.print("/******************************************************************************\n");
 
   init_sensors();
+  beginFileSystem();
   
+  // Tasks dos sensores
   xTaskCreate(taskDHT, "taskDHT", 2048, NULL, 1, NULL);
-  xTaskCreate(taskBH1750, "taskBH1750", 2048, NULL, 1, NULL);
+  //xTaskCreate(taskBH1750, "taskBH1750", 2048, NULL, 1, NULL);
+
+  // Tasks monitoras
+  xTaskCreate(taskMonitorTasks, "taskMonitorTasks", 2048, NULL, 1, NULL); // Task para monitorar execução
+  xTaskCreate(taskMonitorMemory, "taskMonitorMemory", 2048, NULL, 1, NULL);
 }
 
 void loop() 
@@ -65,7 +72,7 @@ void loop()
       while (WiFi.status() != WL_CONNECTED && retries < maxRetries)
       {
           LOG("WIFI", "Tentativa %d de %d", retries + 1, maxRetries);
-          delay(1000);
+          delay(5000);
           retries++;
       }
 
@@ -74,7 +81,7 @@ void loop()
           LOG("WIFI", "Conectado com sucesso!");
           LOG("WIFI", "SSID: %s", ssid);
           LOG("WIFI", "Senha: %s", password);
-          LOG("WIFI", "Endereço IP: %s", WiFi.localIP().toString().c_str());
+          LOG("WIFI", "Endereco IP: %s", WiFi.localIP().toString().c_str());
           connected = true;
       }
       else
@@ -87,6 +94,8 @@ void loop()
 
 void init_sensors()
 {
+    dht.begin();
+    delay(1000);
     if (isnan(dht.readTemperature()) || isnan(dht.readHumidity())) {
         LOG("DHT", "Falha ao inicializar o sensor DHT22.");
     } 
@@ -120,9 +129,9 @@ void taskDHT(void *parameter)
       }
       else
       {
-          LOG("DHT", "Temperatura: %.2f °C, Umidade: %.2f %%", temperature, humidity);
+          LOG("DHT", "Temperatura: %.2f Celsius, Umidade: %.2f %%", temperature, humidity);
       }
-      vTaskDelay(pdMS_TO_TICKS(2000));
+      vTaskDelay(pdMS_TO_TICKS(15000));
       endTaskTimer(MONITOR_DHT);
   }
   LOG("DHT", "Task DHT finalizada");
