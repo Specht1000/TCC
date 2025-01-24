@@ -10,7 +10,7 @@ AsyncWebServer server(80);
 void initWebServer() {
     // Configura ponto de acesso Wi-Fi
     WiFi.softAP("ESP32_AP", "12345678");
-    LOG("WEBSERVER", "AP criado. Conecte-se ao Wi-Fi 'ESP32-Config'.");
+    LOG("WEBSERVER", "AP criado. Conecte-se ao Wi-Fi 'ESP32_AP'.");
     IPAddress IP = WiFi.softAPIP();
     LOG("WEBSERVER", "AP IP: %u.%u.%u.%u", IP[0], IP[1], IP[2], IP[3]);
 
@@ -36,5 +36,5 @@ void initWebServer() {
 
     // Inicia o servidor
     server.begin();
-    LOG("WEBSERVER", "Servidor iniciado.");
+    LOG("WEBSERVER", "Servidor Web iniciado.");
 }
