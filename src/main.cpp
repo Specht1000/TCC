@@ -17,8 +17,10 @@
 #define PIN_SDA 32
 #define PIN_SCL 33
 
-const char* ssid = "igoal_24G";
-const char* password = "igoal@2021";
+const char* ssid = "GMS 2.4G";
+const char* password = "GMS271931@";
+//const char* ssid = "igoal_24G";
+//const char* password = "igoal@2021";
 
 /* Sensores */
 DHT dht(PIN_DHT, DHT22);

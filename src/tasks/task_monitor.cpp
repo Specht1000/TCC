@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SPIFFS.h>
+#include <esp_spiffs.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "task_monitor.h"
@@ -49,29 +50,31 @@ void taskMonitorMemory(void *parameter)
     delay(5000);
     while (true)
     {
-        // Informações sobre a RAM (Heap)
-        uint32_t freeHeap = xPortGetFreeHeapSize();             // Memória livre em bytes
-        uint32_t minFreeHeap = xPortGetMinimumEverFreeHeapSize(); // Memória mínima já registrada
-        uint32_t totalHeap = ESP.getHeapSize();                 // Memória total (somente ESP32)
-        uint32_t usedHeap = totalHeap - freeHeap;               // Memória usada
-        float heapUsagePercentage = ((float)usedHeap / totalHeap) * 100.0; // Porcentagem usada
+        // Informações da RAM (Heap)
+        size_t totalBytesHeap = ESP.getHeapSize();
+        size_t freeBytesHeap = ESP.getFreeHeap();
+        size_t usedBytesHeap = totalBytesHeap - freeBytesHeap;
+        float heapUsagePercentage = ((float)usedBytesHeap / totalBytesHeap) * 100.0;
 
-        // Informações sobre o Flash (SPIFFS)
-        uint32_t totalFlash = SPIFFS.totalBytes(); // Total de bytes no sistema de arquivos SPIFFS
-        uint32_t usedFlash = SPIFFS.usedBytes();   // Bytes usados no SPIFFS
-        uint32_t freeFlash = totalFlash - usedFlash; // Bytes livres no SPIFFS
-        float flashUsagePercentage = ((float)usedFlash / totalFlash) * 100.0; // Porcentagem usada
+        // Informações do Flash (SPIFFS)
+        size_t totalBytesFlash = 0, usedBytesFlash = 0;
+        esp_err_t ret = esp_spiffs_info(NULL, &totalBytesFlash, &usedBytesFlash);
+        if (ret != ESP_OK)
+        {
+            LOG("MONITOR", "Erro ao obter informações do SPIFFS: %s", esp_err_to_name(ret));
+        }
+        size_t freeBytesFlash = totalBytesFlash - usedBytesFlash;
+        float flashUsagePercentage = ((float)usedBytesFlash / totalBytesFlash) * 100.0;
 
         // Exibindo a tabela de memória alinhada
         LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
         LOG("MONITOR", "| Memory Type      | Total (bytes) | Used (bytes) | Free (bytes) | Usage (%%) |");
         LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        LOG("MONITOR", "| RAM (Heap)       | %13u | %12u | %12u | %9.2f%% |", totalHeap, usedHeap, freeHeap, heapUsagePercentage);
-        LOG("MONITOR", "| Flash (SPIFFS)   | %13u | %12u | %12u | %9.2f%% |", totalFlash, usedFlash, freeFlash, flashUsagePercentage);
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        LOG("MONITOR", "| RAM Min. Livre Registrada: %u bytes", minFreeHeap);
+        LOG("MONITOR", "| RAM (Heap)       | %13zu | %12zu | %12zu | %9.2f%% |", totalBytesHeap, usedBytesHeap, freeBytesHeap, heapUsagePercentage);
+        LOG("MONITOR", "| Flash (SPIFFS)   | %13zu | %12zu | %12zu | %9.2f%% |", totalBytesFlash, usedBytesFlash, freeBytesFlash, flashUsagePercentage);
         LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
 
+        // Atraso de 2 minutos
         vTaskDelay(pdMS_TO_TICKS(120000));
     }
 }
