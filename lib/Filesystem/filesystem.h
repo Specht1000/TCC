@@ -4,6 +4,6 @@
 #include <SPIFFS.h>
 #include "main.h"
 
-void beginFileSystem();
+void initFileSystem();
 
 #endif // FILESYSTEM_H

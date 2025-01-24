@@ -1,6 +1,6 @@
 #include "filesystem.h"
 
-void beginFileSystem() 
+void initFileSystem() 
 {
     if (!SPIFFS.begin(true)) 
     {

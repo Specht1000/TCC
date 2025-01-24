@@ -9,6 +9,7 @@
 /* Bibliotecas internas */
 #include "main.h"
 #include "filesystem.h"
+#include "webserver.h"
 #include "tasks/task_monitor.h"
 
 /* Pinagem do projeto */
@@ -16,15 +17,15 @@
 #define PIN_SDA 32
 #define PIN_SCL 33
 
-const char* ssid = "GMS 2.4G";
-const char* password = "GMS271931@";
+const char* ssid = "igoal_24G";
+const char* password = "igoal@2021";
 
 /* Sensores */
 DHT dht(PIN_DHT, DHT22);
 BH1750 lightMeter;
 
 /* Protótipo das funções */
-void init_sensors();
+void initSensors();
 
 /* Protótipos das tasks */
 void taskDHT(void *parameter);
@@ -44,8 +45,9 @@ void setup()
   Serial.print(" * Descricao: Firmware de coleta e analise de dados\n");
   Serial.print("/******************************************************************************\n");
 
-  init_sensors();
-  beginFileSystem();
+  initSensors();
+  initWebServer();
+  initFileSystem();
   
   // Tasks dos sensores
   xTaskCreate(taskDHT, "taskDHT", 2048, NULL, 1, NULL);
@@ -92,7 +94,7 @@ void loop()
   }
 }
 
-void init_sensors()
+void initSensors()
 {
     dht.begin();
     delay(1000);
