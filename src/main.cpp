@@ -5,6 +5,7 @@
 #include <DHT.h>
 #include <BH1750.h>
 #include <WiFi.h>
+#include <PubSubClient.h>
 
 /* Bibliotecas internas */
 #include "main.h"
@@ -14,24 +15,39 @@
 
 /* Pinagem do projeto */
 #define PIN_DHT 26
-#define PIN_SDA 32
-#define PIN_SCL 33
+#define PIN_SDA 21
+#define PIN_SCL 22
 
 const char* ssid = "GMS 2.4G";
 const char* password = "GMS271931@";
 //const char* ssid = "igoal_24G";
 //const char* password = "igoal@2021";
 
+/* MQTT */
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+const char* mqtt_server = "test.mosquitto.org";
+const int mqtt_port = 1883;
+
 /* Sensores */
 DHT dht(PIN_DHT, DHT22);
 BH1750 lightMeter;
 
+/* Variáveis globais para sensores */
+float temperature = 0.0;
+float humidity = 0.0;
+float lux = 0.0;
+
 /* Protótipo das funções */
 void initSensors();
+void initMQTT();
+void reconnectMQTT();
 
-/* Protótipos das tasks */
+/* Protótipos das tasks e handlers*/
 void taskDHT(void *parameter);
 void taskBH1750(void *parameter);
+void taskMQTT(void *parameter);
+TaskHandle_t taskMQTTHandle = NULL;
 
 void setup() 
 {
@@ -87,6 +103,7 @@ void loop()
           LOG("WIFI", "Senha: %s", password);
           LOG("WIFI", "Endereco IP: %s", WiFi.localIP().toString().c_str());
           connected = true;
+          initMQTT();
       }
       else
       {
@@ -94,6 +111,13 @@ void loop()
       }
       delay(1000);
   }
+  
+  // Tenta conectar no broker até ter sucesso
+  if (!mqttClient.connected())
+  {
+    reconnectMQTT();
+  }
+    mqttClient.loop(); // Mantém a conexão MQTT ativa
 }
 
 void initSensors()
@@ -118,14 +142,53 @@ void initSensors()
     }
 }
 
+void initMQTT()
+{
+    mqttClient.setServer(mqtt_server, mqtt_port);
+    reconnectMQTT();
+}
+
+void reconnectMQTT()
+{
+    while (!mqttClient.connected())
+    {
+        LOG("MQTT", "Tentando conectar ao broker...");
+        if (mqttClient.connect("ESP32_Client"))
+        {
+            LOG("MQTT", "Conectado ao broker com sucesso!");
+
+            // Se a task não estiver rodando, crie-a novamente
+            if (taskMQTTHandle == NULL)
+            {
+                xTaskCreate(taskMQTT, "taskMQTT", 4096, NULL, 1, &taskMQTTHandle);
+                LOG("MQTT", "Task MQTT criada.");
+            }
+        }
+        else
+        {
+            LOG("MQTT", "Falha na conexão ao broker. Tentando novamente...");
+            
+            // Se a conexão foi perdida, exclua a task MQTT
+            if (taskMQTTHandle != NULL)
+            {
+                LOG("MQTT", "Desativando Task MQTT...");
+                vTaskDelete(taskMQTTHandle);
+                taskMQTTHandle = NULL; // Resetar o handle da task
+            }
+
+            delay(5000); // Aguarde antes de tentar reconectar
+        }
+    }
+}
+
 void taskDHT(void *parameter)
 {
   LOG("DHT", "Task DHT inicializada");
   while (true)
   {
       startTaskTimer(MONITOR_DHT);
-      float temperature = dht.readTemperature();
-      float humidity = dht.readHumidity();
+      temperature = dht.readTemperature();
+      humidity = dht.readHumidity();
 
       if (isnan(temperature) || isnan(humidity))
       {
@@ -148,7 +211,7 @@ void taskBH1750(void *parameter)
         startTaskTimer(MONITOR_BH1750);
 
         // Leitura da luminosidade
-        float lux = lightMeter.readLightLevel();
+        lux = lightMeter.readLightLevel();
 
         // Verifica se a leitura é válida
         if (lux == -1)
@@ -163,5 +226,40 @@ void taskBH1750(void *parameter)
         // Delay para a próxima leitura (2 segundos)
         vTaskDelay(pdMS_TO_TICKS(2000));
         endTaskTimer(MONITOR_BH1750);
+    }
+}
+
+void taskMQTT(void *parameter)
+{
+    LOG("MQTT", "Task MQTT inicializada");
+    while (true)
+    {
+        startTaskTimer(MONITOR_MQTT);
+        // Publica a temperatura
+        char tempPayload[20];
+        snprintf(tempPayload, sizeof(tempPayload), "%.2f", temperature);
+        if (mqttClient.publish("tcc/sensores/temperatura", tempPayload))
+        {
+            LOG("MQTT", "Temperatura publicada com sucesso!");
+        }
+        else
+        {
+            LOG("MQTT", "Falha ao publicar temperatura!");
+        }
+
+        // Publica a umidade
+        char humPayload[20];
+        snprintf(humPayload, sizeof(humPayload), "%.2f", humidity);
+        if (mqttClient.publish("tcc/sensores/umidade_do_ar", humPayload))
+        {
+            LOG("MQTT", "Umidade do ar publicada com sucesso!");
+        }
+        else
+        {
+            LOG("MQTT", "Falha ao publicar umidade do ar!");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(15000)); // Publica a cada 15 segundos
+        endTaskTimer(MONITOR_MQTT);
     }
 }

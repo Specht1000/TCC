@@ -8,6 +8,7 @@ enum TASKS_TIMER {
     MONITOR_LOOP = 1,
     MONITOR_DHT,
     MONITOR_BH1750,
+    MONITOR_MQTT,
     MONITOR_COUNT
 };
 
@@ -19,9 +20,10 @@ typedef struct {
 
 // Array de TaskInfo para associar os valores do enumerado aos nomes das tasks
 const TaskInfo taskInfoArray[MONITOR_COUNT] = {
-    {MONITOR_LOOP,      "LOOP"},
-    {MONITOR_DHT,       "DHT "},
-    {MONITOR_BH1750,    "BH1750"}
+    {MONITOR_LOOP,      "LOOP  "},
+    {MONITOR_DHT,       "DHT   "},
+    {MONITOR_BH1750,    "BH1750"},
+    {MONITOR_MQTT,      "MQTT  "}
 };
 
 // Estrutura para armazenar o tempo de execução e o contador de execuções de cada task
