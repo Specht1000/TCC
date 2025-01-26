@@ -21,7 +21,7 @@ typedef struct {
 // Array de TaskInfo para associar os valores do enumerado aos nomes das tasks
 const TaskInfo taskInfoArray[MONITOR_COUNT] = {
     {MONITOR_LOOP,      "LOOP  "},
-    {MONITOR_DHT,       "DHT   "},
+    {MONITOR_DHT,       "DHT22 "},
     {MONITOR_BH1750,    "BH1750"},
     {MONITOR_MQTT,      "MQTT  "}
 };

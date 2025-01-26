@@ -11,6 +11,7 @@
 #include "main.h"
 #include "filesystem.h"
 #include "webserver.h"
+#include "rtc.h"
 #include "tasks/task_monitor.h"
 
 /* Pinagem do projeto */
@@ -29,7 +30,8 @@ PubSubClient mqttClient(espClient);
 const char* mqtt_server = "test.mosquitto.org";
 const int mqtt_port = 1883;
 
-/* Sensores */
+/* Sensores e atuadores*/
+RTC rtc;
 DHT dht(PIN_DHT, DHT22);
 BH1750 lightMeter;
 
@@ -42,6 +44,7 @@ float lux = 0.0;
 void initSensors();
 void initMQTT();
 void reconnectMQTT();
+void initRTC();
 
 /* Protótipos das tasks e handlers*/
 void taskDHT(void *parameter);
@@ -103,6 +106,7 @@ void loop()
           LOG("WIFI", "Senha: %s", password);
           LOG("WIFI", "Endereco IP: %s", WiFi.localIP().toString().c_str());
           connected = true;
+          initRTC();
           initMQTT();
       }
       else
@@ -125,11 +129,11 @@ void initSensors()
     dht.begin();
     delay(1000);
     if (isnan(dht.readTemperature()) || isnan(dht.readHumidity())) {
-        LOG("DHT", "Falha ao inicializar o sensor DHT22.");
+        LOG("DHT22", "Falha ao inicializar o sensor DHT22.");
     } 
     else
     {
-        LOG("DHT", "Sensor DHT22 inicializado com sucesso.");
+        LOG("DHT22", "Sensor DHT22 inicializado com sucesso.");
     }
     
     if (lightMeter.begin())
@@ -166,7 +170,7 @@ void reconnectMQTT()
         }
         else
         {
-            LOG("MQTT", "Falha na conexão ao broker. Tentando novamente...");
+            LOG("MQTT", "Falha na conexao ao broker. Tentando novamente...");
             
             // Se a conexão foi perdida, exclua a task MQTT
             if (taskMQTTHandle != NULL)
@@ -181,9 +185,18 @@ void reconnectMQTT()
     }
 }
 
+void initRTC()
+{
+    const char* ntpServer = "pool.ntp.org";
+    long gmtOffsetSec = -10800;
+    int daylightOffsetSec = 3600;
+    rtc.begin(ntpServer, gmtOffsetSec, daylightOffsetSec);
+    rtc.getDateTime();
+}
+
 void taskDHT(void *parameter)
 {
-  LOG("DHT", "Task DHT inicializada");
+  LOG("DHT22", "Task DHT inicializada");
   while (true)
   {
       startTaskTimer(MONITOR_DHT);
@@ -192,16 +205,16 @@ void taskDHT(void *parameter)
 
       if (isnan(temperature) || isnan(humidity))
       {
-          LOG("DHT", "Falha ao ler do sensor DHT22");
+          LOG("DHT22", "Falha ao ler do sensor DHT22");
       }
       else
       {
-          LOG("DHT", "Temperatura: %.2f Celsius, Umidade: %.2f %%", temperature, humidity);
+          LOG("DHT22", "Temperatura: %.2f Celsius, Umidade: %.2f %%", temperature, humidity);
       }
       vTaskDelay(pdMS_TO_TICKS(15000));
       endTaskTimer(MONITOR_DHT);
   }
-  LOG("DHT", "Task DHT finalizada");
+  LOG("DHT22", "Task DHT finalizada");
 }
 
 void taskBH1750(void *parameter)

@@ -18,21 +18,11 @@ Lista de Tecnologias
        - Protoboard - R$73,90 
        - Jumpers. - R$33,82
        - Caixa de proteção para ambiente externo.
-   - LoraWan:
-       - (Opcional) Antena 433MHZ - R$44,90
-       - Módulo Lora Ra-02 - R$65,00
 
 2. Software no Microcontrolador:
    - PlatformIO no Visual Studio Code.
    - Linguagem: C++ (Framework Arduino).
    - FreeRTOS.
-   - NTP.
-   - Bibliotecas:
-       - MQTT.h (para MQTT).
-       - DHT.h (para o sensor DHT22).
-       - BH1750.h (para o sensor de luminosidade).
-       - WiFi.h (para conectividade Wi-Fi).
-       - HTTPClient.h (caso use HTTP para backup).
 
 3. Comunicação:
    - Protocolo MQTT:
@@ -62,11 +52,9 @@ Lista de Tecnologias
 
 6. Outras Ferramentas:
    - MySQL Workbench (para gerenciar o banco de dados).
-   - Postman (para testar requisições HTTP).
    - Multímetro. - R$29,00
 
 7. Extra:
-   - Firebase (para notificações push).
    - MQTT BOX e MQTT Explorer (aplicativo para visualizar dados).
    - Termite3 (terminal serial)
 
