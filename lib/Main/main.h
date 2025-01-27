@@ -2,6 +2,9 @@
 #define MAIN_H
 
 #include <Arduino.h>
+#include "rtc.h"
+
+extern RTC rtc;
 
 #define ENABLE_MAIN_DEBUG
 

@@ -185,13 +185,14 @@ void reconnectMQTT()
     }
 }
 
-void initRTC()
+void initRTC() 
 {
     const char* ntpServer = "pool.ntp.org";
     long gmtOffsetSec = -10800;
     int daylightOffsetSec = 3600;
+
     rtc.begin(ntpServer, gmtOffsetSec, daylightOffsetSec);
-    rtc.getDateTime();
+    LOG("RTC", "Hora atual após sincronizacao: %s", rtc.getDateTime().c_str());
 }
 
 void taskDHT(void *parameter)

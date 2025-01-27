@@ -2,54 +2,50 @@
 #include <ESPAsyncWebServer.h>
 #include "main.h"
 #include "webpage.h"
+#include "rtc.h"
 
-// Instância do servidor
 AsyncWebServer server(80);
 
 void initWebServer() {
     // Configura ponto de acesso Wi-Fi
     WiFi.softAP("ESP32-Config", "12345678");
     LOG("WEBSERVER", "Ponto de acesso criado.");
-    LOG("WEBSERVER", "Conecte-se a rede 'ESP32-Config'");
+    LOG("WEBSERVER", "Conecte-se a rede ESP32-Config");
     IPAddress IP = WiFi.softAPIP();
     LOG("WEBSERVER", "AP IP: %u.%u.%u.%u", IP[0], IP[1], IP[2], IP[3]);
 
-    // Rota principal para exibir a página HTML
+    // Rota principal para exibir a pagina HTML
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/html", webpageHTML);
     });
 
-    // Rota para configurar o Wi-Fi
-    server.on("/setWiFi", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
-            String ssid = request->getParam("ssid", true)->value();
-            String password = request->getParam("password", true)->value();
+    // Rota para configurar a data e hora do RTC
+    server.on("/setRTC", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("year", true) && request->hasParam("month", true) &&
+            request->hasParam("day", true) && request->hasParam("hour", true) &&
+            request->hasParam("minute", true) && request->hasParam("second", true)) {
 
-            WiFi.begin(ssid.c_str(), password.c_str());
-            Serial.println("Tentando conectar ao Wi-Fi...");
+            int year = request->getParam("year", true)->value().toInt();
+            int month = request->getParam("month", true)->value().toInt();
+            int day = request->getParam("day", true)->value().toInt();
+            int hour = request->getParam("hour", true)->value().toInt();
+            int minute = request->getParam("minute", true)->value().toInt();
+            int second = request->getParam("second", true)->value().toInt();
 
-            // Aguarda a conexão
-            unsigned long startTime = millis();
-            while (WiFi.status() != WL_CONNECTED && millis() - startTime < 15000) {
-                delay(500);
-                Serial.print(".");
-            }
+            rtc.setRTC(year, month, day, hour, minute, second);
+            LOG("RTC", "Data e hora ajustadas: %s", rtc.getDateTime().c_str());
 
-            // Verifica se a conexão foi bem-sucedida
-            if (WiFi.status() == WL_CONNECTED) {
-                Serial.println("\nConexão bem-sucedida!");
-                Serial.print("IP do dispositivo: ");
-                Serial.println(WiFi.localIP());
-                request->send(200, "text/html", "<h2>Conexão bem-sucedida!</h2><p>O dispositivo está conectado à rede Wi-Fi.</p>");
-            } else {
-                Serial.println("\nErro ao conectar.");
-                request->send(200, "text/html", "<h2>Erro ao conectar.</h2><p>Verifique o SSID e a senha e tente novamente.</p>");
-            }
+            request->send(200, "text/html", "<h2>Data e hora ajustadas com sucesso!</h2>");
         } else {
-            request->send(400, "text/html", "<h2>Erro: Campos vazios.</h2>");
+            request->send(400, "text/html", "<h2>Erro: Campos inválidos.</h2>");
         }
     });
 
+    // Rota para obter a data e hora atuais
+    server.on("/getRTC", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", rtc.getDateTime());
+    });
+    
     // Inicia o servidor
     server.begin();
     LOG("WEBSERVER", "Servidor iniciado.");

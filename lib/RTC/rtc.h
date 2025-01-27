@@ -10,6 +10,7 @@ public:
     String getDate();
     String getTime();
     unsigned long getEpochTime();
+    void setRTC(int year, int month, int day, int hour, int minute, int second);
 };
 
 #endif // RTC_H
