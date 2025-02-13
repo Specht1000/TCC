@@ -19,10 +19,10 @@
 #define PIN_SDA 21
 #define PIN_SCL 22
 
-const char* ssid = "GMS 2.4G";
-const char* password = "GMS271931@";
-//const char* ssid = "igoal_24G";
-//const char* password = "igoal@2021";
+//const char* ssid = "GMS 2.4G";
+//const char* password = "GMS271931@";
+const char* ssid = "igoal_24G";
+const char* password = "igoal@2021";
 
 /* MQTT */
 WiFiClient espClient;

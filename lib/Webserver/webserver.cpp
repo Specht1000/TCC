@@ -19,31 +19,21 @@ void initWebServer() {
         request->send(200, "text/html", webpageHTML);
     });
 
-    // Rota para configurar a data e hora do RTC
-    server.on("/setRTC", HTTP_POST, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("year", true) && request->hasParam("month", true) &&
-            request->hasParam("day", true) && request->hasParam("hour", true) &&
-            request->hasParam("minute", true) && request->hasParam("second", true)) {
-
-            int year = request->getParam("year", true)->value().toInt();
-            int month = request->getParam("month", true)->value().toInt();
-            int day = request->getParam("day", true)->value().toInt();
-            int hour = request->getParam("hour", true)->value().toInt();
-            int minute = request->getParam("minute", true)->value().toInt();
-            int second = request->getParam("second", true)->value().toInt();
-
-            rtc.setRTC(year, month, day, hour, minute, second);
-            LOG("RTC", "Data e hora ajustadas: %s", rtc.getDateTime().c_str());
-
-            request->send(200, "text/html", "<h2>Data e hora ajustadas com sucesso!</h2>");
-        } else {
-            request->send(400, "text/html", "<h2>Erro: Campos inválidos.</h2>");
-        }
-    });
-
     // Rota para obter a data e hora atuais
     server.on("/getRTC", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", rtc.getDateTime());
+    });
+
+    // Rota para obter as informações da rede
+    server.on("/getNetworkInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
+        json += "\"gateway\":\"" + WiFi.gatewayIP().toString() + "\",";
+        json += "\"subnet\":\"" + WiFi.subnetMask().toString() + "\",";
+        json += "\"dns\":\"" + WiFi.dnsIP().toString() + "\",";
+        json += "\"mac\":\"" + WiFi.macAddress() + "\"";
+        json += "}";
+        request->send(200, "application/json", json);
     });
     
     // Inicia o servidor
