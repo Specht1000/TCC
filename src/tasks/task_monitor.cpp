@@ -11,26 +11,48 @@ TaskExecutionTime taskTimes[MONITOR_COUNT];
 
 // Task para monitorar os tempos de execução das tasks e reiniciar o dispositivo se necessário
 void taskMonitorTasks(void *pvParameters) {
-    delay(5000);
+    delay(15000); // Delay inicial para permitir que outras tasks sejam iniciadas
     while (true) {
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        LOG("MONITOR", "Task Name\tExecution Time (ms)\tExecution Count");
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        for (int i = 0; i < MONITOR_COUNT - 1; i++) { // Ajuste para evitar acessar MONITOR_COUNT
+        LOG("MONITOR", "Task Name\tExecution Time (ms)\tExecution Count\t\tStuck Status");
+        LOG("MONITOR", "------------------------------------------------------------------------------------------------");
+        for (int i = 0; i < MONITOR_COUNT; i++) { // Verifica todas as tasks
             if (taskTimes[taskInfoArray[i].task].executionTime == 0 && taskTimes[taskInfoArray[i].task].executionCount == 0) {
                 continue; // Não imprime tasks que nunca foram iniciadas
             }
-            uint32_t executionTimeMs = taskTimes[taskInfoArray[i].task].executionTime * portTICK_PERIOD_MS;
-            LOG("MONITOR", "%s\t\t%u\t\t\t%u", taskInfoArray[i].name, executionTimeMs, taskTimes[taskInfoArray[i].task].executionCount);
+
+            // Calcula o tempo de execução em milissegundo
+            uint32_t executionTimeMs = pdTICKS_TO_MS(xTaskGetTickCount() - taskTimes[taskInfoArray[i].task].startTime);
+
+            if(taskTimes[taskInfoArray[i].task].executionCount != taskTimes[taskInfoArray[i].task].executionCountCompare)
+            {
+                executionTimeMs = pdTICKS_TO_MS(taskTimes[taskInfoArray[i].task].executionTime);
+            }
+
+            LOG("MONITOR", "%s\t\t%u\t\t\t%u\t\t\t%s",
+                      taskInfoArray[i].name,
+                      executionTimeMs,
+                      taskTimes[taskInfoArray[i].task].executionCount,
+                      taskTimes[taskInfoArray[i].task].isStuck ? "STUCK" : "OK");
 
             // Verifica se a task está travada (tempo atual - tempo de início > 10 minutos)
-            if ((xTaskGetTickCount() - taskTimes[taskInfoArray[i].task].startTime) > (10 * 60 * 1000 / portTICK_PERIOD_MS)) 
-            {
-                LOG("MONITOR", "Reiniciando dispositivo devido a task travada: %s", taskInfoArray[i].name);
-                ESP.restart();
+            if (executionTimeMs > (60 * 1000)) { // 10 minutos
+                if (!taskTimes[taskInfoArray[i].task].isStuck) {
+                    // Marca a task como travada
+                    taskTimes[taskInfoArray[i].task].isStuck = true;
+                }
+                if(executionTimeMs > (10 * 60 * 1000))
+                {
+                    delay(2000);
+                    // Reinicia o dispositivo após 10 minutos de task travada
+                    LOG("MONITOR", "Reiniciando dispositivo devido a task travada: %s", taskInfoArray[i].name);
+                    ESP.restart();
+                }
             }
+            taskTimes[taskInfoArray[i].task].executionCountCompare = taskTimes[taskInfoArray[i].task].executionCount;
         }
-        vTaskDelay(30000 / portTICK_PERIOD_MS);
+        // Chama a função para logar o uso de memória
+        logMemoryUsage();
+        vTaskDelay(30000 / portTICK_PERIOD_MS); // Verifica a cada 1 segundo
     }
 }
 
@@ -45,36 +67,24 @@ void endTaskTimer(TASKS_TIMER task) {
     taskTimes[task].executionCount++;
 }
 
-void taskMonitorMemory(void *parameter)
-{
-    delay(5000);
-    while (true)
-    {
-        // Informações da RAM (Heap)
-        size_t totalBytesHeap = ESP.getHeapSize();
-        size_t freeBytesHeap = ESP.getFreeHeap();
-        size_t usedBytesHeap = totalBytesHeap - freeBytesHeap;
-        float heapUsagePercentage = ((float)usedBytesHeap / totalBytesHeap) * 100.0;
+void logMemoryUsage() {
+    // RAM do microcontrolador (heap)
+    size_t totalBytesHeap = ESP.getHeapSize();
+    size_t freeBytesHeap = ESP.getFreeHeap();
+    size_t usedBytesHeap = totalBytesHeap - freeBytesHeap;
+    float usedPercentageHeap = ((float)usedBytesHeap* 100) / (float)totalBytesHeap ;
 
-        // Informações do Flash (SPIFFS)
-        size_t totalBytesFlash = 0, usedBytesFlash = 0;
-        esp_err_t ret = esp_spiffs_info(NULL, &totalBytesFlash, &usedBytesFlash);
-        if (ret != ESP_OK)
-        {
-            LOG("MONITOR", "Erro ao obter informações do SPIFFS: %s", esp_err_to_name(ret));
-        }
-        size_t freeBytesFlash = totalBytesFlash - usedBytesFlash;
-        float flashUsagePercentage = ((float)usedBytesFlash / totalBytesFlash) * 100.0;
+    // Flash SPI
+    size_t totalBytes = SPIFFS.totalBytes();
+    size_t usedBytes = SPIFFS.usedBytes();
+    float usedPercentageFlash = ((float)usedBytes * 100) / (float)totalBytes;
 
-        // Exibindo a tabela de memória alinhada
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        LOG("MONITOR", "| Memory Type      | Total (bytes) | Used (bytes) | Free (bytes) | Usage (%%) |");
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
-        LOG("MONITOR", "| RAM (Heap)       | %13zu | %12zu | %12zu | %9.2f%% |", totalBytesHeap, usedBytesHeap, freeBytesHeap, heapUsagePercentage);
-        LOG("MONITOR", "| Flash (SPIFFS)   | %13zu | %12zu | %12zu | %9.2f%% |", totalBytesFlash, usedBytesFlash, freeBytesFlash, flashUsagePercentage);
-        LOG("MONITOR", "--------------------------------------------------------------------------------------------------");
+    // Log de uso de memória formatado em tabela
+    LOG("MONITOR", "------------------------------------------------------------------------------------------------");
+    LOG("MONITOR", "Memoria\t\t\tLivre(b)\t\tUsada(b)\t\tPorcentagem de Uso");
+    LOG("MONITOR", "------------------------------------------------------------------------------------------------");
+    LOG("MONITOR", "Heap (RAM interna)\t%u\t\t%u\t\t\t%.2f%%", freeBytesHeap, usedBytesHeap, usedPercentageHeap);
+    LOG("MONITOR", "SPIFFS (Flash)\t\t%u\t%u\t\t\t%.2f%%", totalBytes - usedBytes, usedBytes, usedPercentageFlash);
 
-        // Atraso de 2 minutos
-        vTaskDelay(pdMS_TO_TICKS(120000));
-    }
+    vTaskDelay(30000 / portTICK_PERIOD_MS);
 }

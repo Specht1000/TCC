@@ -32,11 +32,13 @@ typedef struct {
     TickType_t endTime;
     TickType_t executionTime;
     uint32_t executionCount;
+    uint32_t executionCountCompare;
+    bool isStuck;
 } TaskExecutionTime;
 
 void taskMonitorTasks(void *pvParameters);
 void startTaskTimer(TASKS_TIMER task);
 void endTaskTimer(TASKS_TIMER task);
-void taskMonitorMemory(void *pvParameters);
+void logMemoryUsage();
 
 #endif // TASKS_MONITOR_H

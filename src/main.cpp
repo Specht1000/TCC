@@ -76,7 +76,6 @@ void setup()
 
   // Tasks monitoras
   xTaskCreate(taskMonitorTasks, "taskMonitorTasks", 2048, NULL, 1, NULL); // Task para monitorar execução
-  xTaskCreate(taskMonitorMemory, "taskMonitorMemory", 2048, NULL, 1, NULL);
 }
 
 void loop() 
@@ -192,7 +191,7 @@ void initRTC()
     int daylightOffsetSec = 3600;
 
     rtc.begin(ntpServer, gmtOffsetSec, daylightOffsetSec);
-    LOG("RTC", "Hora atual após sincronizacao: %s", rtc.getDateTime().c_str());
+    LOG("RTC", "Hora atual apos sincronizacao: %s", rtc.getDateTime().c_str());
 }
 
 void taskDHT(void *parameter)

@@ -2,7 +2,7 @@
 #define WEBPAGE_H
 
 const char webpageHTML[] = R"rawliteral(
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html>
     <head>
         <title>Configurar RTC e Wi-Fi</title>
@@ -62,10 +62,10 @@ const char webpageHTML[] = R"rawliteral(
         
         <h3>Data e Hora Atual: <span id="currentRTC">Carregando...</span></h3>
     
-        <h2>Informações da Rede</h2>
+        <h2>Infos da Rede</h2>
         <p><strong>IP do Dispositivo:</strong> <span id="deviceIP">Carregando...</span></p>
         <p><strong>Gateway:</strong> <span id="gatewayIP">Carregando...</span></p>
-        <p><strong>Máscara de Sub-rede:</strong> <span id="subnetMask">Carregando...</span></p>
+        <p><strong>Mascara de Sub-rede:</strong> <span id="subnetMask">Carregando...</span></p>
         <p><strong>Servidor DNS:</strong> <span id="dnsServer">Carregando...</span></p>
         <p><strong>MAC Address:</strong> <span id="macAddress">Carregando...</span></p>
     
@@ -77,6 +77,6 @@ const char webpageHTML[] = R"rawliteral(
         </form>
     </body>
     </html>
-    )rawliteral";    
+)rawliteral";    
 
 #endif
