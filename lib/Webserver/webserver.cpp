@@ -1,8 +1,11 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 #include "main.h"
 #include "webpage.h"
 #include "rtc.h"
+#include "webserver.h"
+#include "filesystem.h"
 
 AsyncWebServer server(80);
 
@@ -24,18 +27,29 @@ void initWebServer() {
         request->send(200, "text/plain", rtc.getDateTime());
     });
 
-    // Rota para obter as informações da rede
     server.on("/getNetworkInfo", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String ssid = (WiFi.getMode() == WIFI_STA) ? WiFi.SSID() : WiFi.softAPSSID();
+    
         String json = "{";
         json += "\"ip\":\"" + WiFi.localIP().toString() + "\",";
         json += "\"gateway\":\"" + WiFi.gatewayIP().toString() + "\",";
         json += "\"subnet\":\"" + WiFi.subnetMask().toString() + "\",";
         json += "\"dns\":\"" + WiFi.dnsIP().toString() + "\",";
-        json += "\"mac\":\"" + WiFi.macAddress() + "\"";
+        json += "\"mac\":\"" + WiFi.macAddress() + "\",";
+        json += "\"ssid\":\"" + ssid + "\"";
         json += "}";
+    
         request->send(200, "application/json", json);
     });
-    
+
+    // Rota para obter o serial number
+    server.on("/getSerialNumber", HTTP_GET, [](AsyncWebServerRequest *request) {
+        uint32_t serialNumber = getSerialNumber();
+        String snStr = String(serialNumber);
+        request->send(200, "text/plain", snStr);
+        LOG("WEBSERVER", "Serial Number enviado: %s", snStr.c_str());
+    });
+
     // Inicia o servidor
     server.begin();
     LOG("WEBSERVER", "Servidor iniciado.");

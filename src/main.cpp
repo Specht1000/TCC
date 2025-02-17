@@ -19,10 +19,11 @@
 #define PIN_SDA 21
 #define PIN_SCL 22
 
-//const char* ssid = "GMS 2.4G";
-//const char* password = "GMS271931@";
-const char* ssid = "igoal_24G";
-const char* password = "igoal@2021";
+const char* ssid = "GMS 2.4G";
+const char* password = "GMS271931@";
+//const char* ssid = "igoal_24G";
+//const char* password = "igoal@2021";
+uint32_t deviceSerialNumber;
 
 /* MQTT */
 WiFiClient espClient;
@@ -66,9 +67,22 @@ void setup()
   Serial.print(" * Descricao: Firmware de coleta e analise de dados\n");
   Serial.print("/******************************************************************************\n");
 
-  initSensors();
-  initWebServer();
   initFileSystem();
+  deviceSerialNumber = getSerialNumber();
+  if (deviceSerialNumber == 0) 
+  {
+      deviceSerialNumber = generateSerialNumber();
+      saveSerialNumber(deviceSerialNumber);
+      LOG("NVS", "Serial Number gerado: %u", deviceSerialNumber);
+  } 
+  else 
+  {
+      LOG("NVS", "Serial Number carregado: %u", deviceSerialNumber);
+  }
+
+  initSensors();
+  ensureSerialNumber();
+  initWebServer();
   
   // Tasks dos sensores
   xTaskCreate(taskDHT, "taskDHT", 2048, NULL, 1, NULL);
@@ -245,31 +259,39 @@ void taskBH1750(void *parameter)
 void taskMQTT(void *parameter)
 {
     LOG("MQTT", "Task MQTT inicializada");
+    uint32_t serialNumber = getSerialNumber();
+    char topicTemp[50];
+    char topicHum[50];
+
+    snprintf(topicTemp, sizeof(topicTemp), "tcc/sensores/temperatura/%u", serialNumber);
+    snprintf(topicHum, sizeof(topicHum), "tcc/sensores/umidade_do_ar/%u", serialNumber);
+
     while (true)
     {
         startTaskTimer(MONITOR_MQTT);
+
         // Publica a temperatura
         char tempPayload[20];
         snprintf(tempPayload, sizeof(tempPayload), "%.2f", temperature);
-        if (mqttClient.publish("tcc/sensores/temperatura", tempPayload))
+        if (mqttClient.publish(topicTemp, tempPayload))
         {
-            LOG("MQTT", "Temperatura publicada com sucesso!");
+            LOG("MQTT", "Temperatura publicada com sucesso no topico %s!", topicTemp);
         }
         else
         {
-            LOG("MQTT", "Falha ao publicar temperatura!");
+            LOG("MQTT", "Falha ao publicar temperatura no topico %s!", topicTemp);
         }
 
         // Publica a umidade
         char humPayload[20];
         snprintf(humPayload, sizeof(humPayload), "%.2f", humidity);
-        if (mqttClient.publish("tcc/sensores/umidade_do_ar", humPayload))
+        if (mqttClient.publish(topicHum, humPayload))
         {
-            LOG("MQTT", "Umidade do ar publicada com sucesso!");
+            LOG("MQTT", "Umidade do ar publicada com sucesso no topico %s!", topicHum);
         }
         else
         {
-            LOG("MQTT", "Falha ao publicar umidade do ar!");
+            LOG("MQTT", "Falha ao publicar umidade do ar no topico %s!", topicHum);
         }
 
         vTaskDelay(pdMS_TO_TICKS(15000)); // Publica a cada 15 segundos
