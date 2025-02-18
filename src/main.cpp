@@ -225,6 +225,7 @@ void taskDHT(void *parameter)
       {
           LOG("DHT22", "Temperatura: %.2f Celsius, Umidade: %.2f %%", temperature, humidity);
       }
+      
       vTaskDelay(pdMS_TO_TICKS(15000));
       endTaskTimer(MONITOR_DHT);
   }
