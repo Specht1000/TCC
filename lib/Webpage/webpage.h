@@ -117,7 +117,7 @@ const char webpageHTML[] = R"rawliteral(
                 console.error('Erro ao buscar RTC:', error);
             }
         }
-
+    
         async function fetchNetworkInfo() {
             try {
                 const response = await fetch('/getNetworkInfo');
@@ -127,12 +127,12 @@ const char webpageHTML[] = R"rawliteral(
                 document.getElementById('subnetMask').innerText = data.subnet;
                 document.getElementById('dnsServer').innerText = data.dns;
                 document.getElementById('macAddress').innerText = data.mac;
-                document.getElementById('wifiSSID').innerText = data.ssid;
+                document.getElementById('APSSID').innerText = data.ssid;
             } catch (error) {
                 console.error('Erro ao buscar informações de rede:', error);
             }
         }
-
+    
         async function fetchSerialNumber() {
             try {
                 const response = await fetch('/getSerialNumber');
@@ -141,34 +141,116 @@ const char webpageHTML[] = R"rawliteral(
                 if (snElement) {
                     snElement.innerText = serial;
                 }
-                // Atualizar os tópicos MQTT no Node-RED com o serial number
                 document.getElementById('mqttTemp').innerText = `tcc/sensores/temperatura/${serial}`;
                 document.getElementById('mqttHumidity').innerText = `tcc/sensores/umidade_do_ar/${serial}`;
-                document.getElementById('mqttLimits').innerText = `tcc/sensores/config/temperature_limits/${serial}`;
-                
-                // Enviar comandos para o Node-RED para alterar os tópicos dinamicamente
+    
                 await fetch(`/setMqttTopics?serial=${serial}`);
-
             } catch (error) {
                 console.error('Erro ao buscar Serial Number:', error);
             }
         }
-
+    
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
             const section = document.getElementById(sectionId);
             if (section) section.classList.remove('hidden');
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
+    
+        async function fetchLimits() {
+            try {
+                const response = await fetch('/getLimits');
+                const data = await response.json();
+                
+                document.getElementById("tempMin").value = data.tempMin;
+                document.getElementById("tempMax").value = data.tempMax;
+                document.getElementById("humMin").value = data.humMin;
+                document.getElementById("humMax").value = data.humMax;
+                
+                console.log("✅ Limites carregados:", data);
+            } catch (error) {
+                console.error("❌ Erro ao buscar os limites:", error);
+            }
+        }
+    
+        // Carregar os limites salvos no Local Storage
+        function carregarLimites() {
+            document.getElementById("tempMin").value = localStorage.getItem("tempMin") || 15.0;
+            document.getElementById("tempMax").value = localStorage.getItem("tempMax") || 35.0;
+            document.getElementById("humMin").value = localStorage.getItem("humMin") || 30.0;
+            document.getElementById("humMax").value = localStorage.getItem("humMax") || 80.0;
+        }
+    
+        // Salvar limites no Local Storage e enviar ao ESP32
+        async function salvarLimites(event) {
+            event.preventDefault(); // Impede que a página seja recarregada
+    
+            const tempMin = document.getElementById("tempMin").value;
+            const tempMax = document.getElementById("tempMax").value;
+            const humMin = document.getElementById("humMin").value;
+            const humMax = document.getElementById("humMax").value;
+    
+            console.log(`📡 Enviando limites: TempMin=${tempMin}, TempMax=${tempMax}, HumMin=${humMin}, HumMax=${humMax}`);
+    
+            // Salvar no Local Storage
+            localStorage.setItem("tempMin", tempMin);
+            localStorage.setItem("tempMax", tempMax);
+            localStorage.setItem("humMin", humMin);
+            localStorage.setItem("humMax", humMax);
+    
+            try {
+                const response = await fetch("/setLimits", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `tempMin=${tempMin}&tempMax=${tempMax}&humMin=${humMin}&humMax=${humMax}`
+                });
+    
+                if (!response.ok) {
+                    throw new Error("Erro ao salvar configurações no ESP32.");
+                }
+    
+                const data = await response.json();
+                console.log("✅ Resposta do ESP32:", data);
+                alert("✅ Limites salvos com sucesso!");
+    
+                await fetchLimits(); // Atualiza os valores exibidos na interface
+    
+            } catch (error) {
+                console.error("❌ Erro ao salvar limites:", error);
+                alert("Erro ao salvar os limites!");
+            }
+        }
+    
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("🚀 Página carregada. Inicializando eventos...");
+    
             fetchRTC();
             fetchNetworkInfo();
             fetchSerialNumber();
+            fetchLimits();
+            carregarLimites();
             showSection('identificacao');
+    
             setInterval(fetchRTC, 5000);
             setInterval(fetchNetworkInfo, 10000);
+    
+            // Garante que o botão "Salvar" está funcionando
+            const btnSalvar = document.getElementById("btnSalvar");
+            if (btnSalvar) {
+                console.log("✅ Botão 'Salvar' encontrado.");
+                btnSalvar.addEventListener("click", salvarLimites);
+            } else {
+                console.error("❌ Botão 'Salvar' não encontrado! Verifique o ID no HTML.");
+            }
+    
+            // Garante que o formulário não recarrega ao ser enviado
+            const form = document.getElementById("formSensores");
+            if (form) {
+                form.addEventListener("submit", salvarLimites);
+            } else {
+                console.error("❌ Formulário não encontrado!");
+            }
         });
-    </script>    
+    </script>        
 </head>
 <body>
     <div class="sidebar">
@@ -192,7 +274,7 @@ const char webpageHTML[] = R"rawliteral(
                 <p><strong>Máscara de Sub-rede:</strong> <span id="subnetMask">Carregando...</span></p>
                 <p><strong>Servidor DNS:</strong> <span id="dnsServer">Carregando...</span></p>
                 <p><strong>MAC Address:</strong> <span id="macAddress">Carregando...</span></p>
-                <p><strong>AP SSID:</strong> <span id="wifiSSID">Carregando...</span></p>
+                <p><strong>AP SSID:</strong> <span id="APSSID">Carregando...</span></p>
             </div>
             <div class="card">
                 <h3>Data e Hora Atual</h3>
@@ -202,7 +284,6 @@ const char webpageHTML[] = R"rawliteral(
                 <h3>Tópicos MQTT</h3>
                 <p><strong>Temperatura:</strong> <span id="mqttTemp">Carregando...</span></p>
                 <p><strong>Umidade:</strong> <span id="mqttHumidity">Carregando...</span></p>
-                <p><strong>Limites de Temperatura:</strong> <span id="mqttLimits">Carregando...</span></p>
             </div>
         </div>
 
@@ -218,17 +299,39 @@ const char webpageHTML[] = R"rawliteral(
             </div>
         </div>
 
-        <div id="modoOperacao" class="section hidden">
-            <h1>Modo de Operação</h1>
-            <div class="card">
-                <p>Configuração do modo de operação do dispositivo.</p>
-            </div>
-        </div>
-
         <div id="configSensores" class="section hidden">
             <h1>Configurar Sensores</h1>
             <div class="card">
-                <p>Configuração dos sensores conectados ao dispositivo.</p>
+                <form id="formSensores">
+                    <label>Temperatura Mínima:</label>
+                    <input type="number" id="tempMin" step="0.1">
+                    
+                    <label>Temperatura Máxima:</label>
+                    <input type="number" id="tempMax" step="0.1">
+                    
+                    <label>Umidade Mínima:</label>
+                    <input type="number" id="humMin" step="0.1">
+                    
+                    <label>Umidade Máxima:</label>
+                    <input type="number" id="humMax" step="0.1">
+                    
+                    <button id="btnSalvar">Salvar</button>
+                </form>                
+            </div>
+        </div>
+
+        <div id="alertas" class="section hidden">
+            <h1>Alertas</h1>
+            <div id="alertBox" class="card">
+                <h3>Notificações dos Sensores</h3>
+                <ul id="alertList"></ul>
+            </div>
+        </div>
+
+        <div id="logs" class="section hidden">
+            <h1>Logs</h1>
+            <div class="card">
+                <p>Visualização dos logs do sistema.</p>
             </div>
         </div>
 

@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
+#include <float.h> 
 #include "main.h"
 #include "webpage.h"
 #include "rtc.h"
@@ -48,9 +49,64 @@ void initWebServer() {
         String snStr = String(serialNumber);
         request->send(200, "text/plain", snStr);
         LOG("WEBSERVER", "Serial Number enviado: %s", snStr.c_str());
+    });    
+
+    // Rota para definir os limites dos sensores
+    server.on("/setLimits", HTTP_POST, [](AsyncWebServerRequest *request) {
+        if (request->hasParam("tempMin", true) && request->hasParam("tempMax", true) &&
+            request->hasParam("humMin", true) && request->hasParam("humMax", true)) {
+
+            tempMin = request->getParam("tempMin", true)->value().toFloat();
+            tempMax = request->getParam("tempMax", true)->value().toFloat();
+            humMin = request->getParam("humMin", true)->value().toFloat();
+            humMax = request->getParam("humMax", true)->value().toFloat();
+
+            LOG("WEBSERVER", "Novos limites: TempMin=%.1f, TempMax=%.1f, HumMin=%.1f, HumMax=%.1f",
+                tempMin, tempMax, humMin, humMax);
+
+            request->send(200, "application/json", "{\"status\":\"ok\", \"message\":\"Limites atualizados!\"}");
+        } else {
+            request->send(400, "application/json", "{\"status\":\"error\", \"message\":\"Parâmetros ausentes!\"}");
+            LOG("ERRO", "Parâmetros ausentes na requisicao.");
+        }
+    });
+
+    // Rota para obter os limites atuais
+    server.on("/getLimits", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String json = "{";
+        json += "\"tempMin\":" + String(tempMin, 1) + ",";
+        json += "\"tempMax\":" + String(tempMax, 1) + ",";
+        json += "\"humMin\":" + String(humMin, 1) + ",";
+        json += "\"humMax\":" + String(humMax, 1);
+        json += "}";
+
+        LOG("WEBSERVER", "Enviando limites: %s", json.c_str());
+        request->send(200, "application/json", json);
     });
 
     // Inicia o servidor
     server.begin();
     LOG("WEBSERVER", "Servidor iniciado.");
+}
+
+void checkAlerts() {
+    char message[100];
+
+    if (temperature < tempMin || temperature > tempMax) {
+        snprintf(message, sizeof(message),
+                 "Temperatura %.2f Celsius fora do limite (%.2f - %.2f)!",
+                 temperature, tempMin, tempMax);
+        LOG("ALERTA", "%s", message);
+    } else {
+        LOG("ALERTA", "Temperatura dentro dos limites.");
+    }
+
+    if (humidity < humMin || humidity > humMax) {
+        snprintf(message, sizeof(message),
+                 "Umidade %.2f%% fora do limite (%.2f - %.2f)!",
+                 humidity, humMin, humMax);
+        LOG("ALERTA", "%s", message);
+    } else {
+        LOG("ALERTA", "Umidade dentro dos limites.");
+    }
 }

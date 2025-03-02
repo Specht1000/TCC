@@ -1,8 +1,19 @@
 #include "filesystem.h"
 #include <nvs_flash.h>
 #include <nvs.h>
+#include <ArduinoJson.h>
 #include <stdlib.h>
 #include <time.h>
+#include <float.h>
+
+// Caminho do arquivo de configuração na SPIFFS
+const char *configFilePath = "/config.json";
+
+// Definição das variáveis globais
+float tempMin = 15.0;
+float tempMax = 35.0;
+float humMin = 30.0;
+float humMax = 80.0;
 
 void initFileSystem() 
 {
@@ -14,6 +25,7 @@ void initFileSystem()
     {
         LOG("SPIFFS", "Sistema de arquivos SPIFFS inicializado com sucesso!");
     }
+    
     initNVS();
 }
 

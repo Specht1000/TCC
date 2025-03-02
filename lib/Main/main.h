@@ -6,6 +6,9 @@
 
 extern RTC rtc;
 
+extern float temperature;
+extern float humidity;
+
 #define ENABLE_MAIN_DEBUG
 
 #ifdef ENABLE_MAIN_DEBUG

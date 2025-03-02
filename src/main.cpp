@@ -68,6 +68,7 @@ void setup()
   Serial.print("/******************************************************************************\n");
 
   initFileSystem();
+
   deviceSerialNumber = getSerialNumber();
   if (deviceSerialNumber == 0) 
   {
@@ -89,7 +90,7 @@ void setup()
   //xTaskCreate(taskBH1750, "taskBH1750", 2048, NULL, 1, NULL);
 
   // Tasks monitoras
-  xTaskCreate(taskMonitorTasks, "taskMonitorTasks", 2048, NULL, 1, NULL); // Task para monitorar execução
+  xTaskCreate(taskMonitorTasks, "taskMonitorTasks", 2048, NULL, 1, NULL);
 }
 
 void loop() 
@@ -224,6 +225,7 @@ void taskDHT(void *parameter)
       else
       {
           LOG("DHT22", "Temperatura: %.2f Celsius, Umidade: %.2f %%", temperature, humidity);
+          checkAlerts();
       }
       
       vTaskDelay(pdMS_TO_TICKS(15000));
@@ -249,6 +251,7 @@ void taskBH1750(void *parameter)
         else
         {
             LOG("BH1750", "Luminosidade: %.2f lx", lux);
+            checkAlerts();
         }
 
         // Delay para a próxima leitura (2 segundos)

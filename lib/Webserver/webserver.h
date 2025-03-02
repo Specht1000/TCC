@@ -6,5 +6,6 @@
 extern PubSubClient mqttClient;
 
 void initWebServer();
+void checkAlerts();
 
 #endif
